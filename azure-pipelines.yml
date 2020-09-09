@@ -1,4 +1,11 @@
 # Starter pipeline
+- task: DockerCompose@0
+  inputs:
+    containerregistrytype: 'Azure Container Registry'
+    azureSubscription: 'Pay-As-You-Go(946de978-cdf5-4d29-bf9b-014a95e89e63)'
+    azureContainerRegistry: '{"loginServer":"acrhelmdemo.azurecr.io", "id" : "/subscriptions/946de978-cdf5-4d29-bf9b-014a95e89e63/resourceGroups/acr-helm-demo/providers/Microsoft.ContainerRegistry/registries/acrhelmdemo"}'
+    dockerComposeFile: '**/docker-compose.yml'
+    action: 'Push services'
 # Start with a minimal pipeline that you can customize to build and deploy your code.
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml

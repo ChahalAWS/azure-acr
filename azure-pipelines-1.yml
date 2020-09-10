@@ -1,33 +1,33 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'ubuntu-latest'
+pr: none
 
-  steps:
-    - checkout: self
-      fetchDepth: 1
+variables:
+  HELM_EXPERIMENTAL_OCI: 1
+  ACR.Name: 'acrtest123321'
+  Azure.ServiceConnection: '95fbb3f3-566c-4187-b976-cb49817a7c06'
 
-    - task: HelmInstaller@1
-      displayName: 'Initialize Helm'
-      inputs:
-        helmVersionToInstall: '$(helmVersion)'
-
-    - task: HelmDeploy@0
-      displayName: 'Package Helm Chart'
-      inputs:
-        command: 'package'
-        chartPath: 'parrot/src/parrot/charts/parrot'
-        chartVersion: '$(Build.BuildNumber)'
-        save: false
-
+stages:
+- stage: build
+  displayName: Build and Push
+  jobs:  
+  - job: job_helm
+    displayName: Helm Publish
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
     - task: AzureCLI@2
-      displayName: 'Push Helm Chart'
+      displayName: Login to Azure Container Registry
       inputs:
-        azureSubscription: '946de978-cdf5-4d29-bf9b-014a95e89e63'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
+        azureSubscription: "$(Azure.ServiceConnection)"
+        scriptType: bash
+        scriptLocation: inlineScript
         inlineScript: |
-          az acr helm push \
-            --name $(containerRegistry) \
-            $(Build.ArtifactStagingDirectory)/$(containerRepository)-$(Build.BuildNumber).tgz
+          az acr login --name $(ACR.Name)
+    - task: HelmInstaller@1
+      inputs:
+        helmVersionToInstall: 'latest'
+    - bash: |
+        helm chart save ./k8s/realworld-backend/ $(ACR.Name).azurecr.io/charts/realworld-backend:latest
+        helm chart push $(ACR.Name).azurecr.io/charts/realworld-backend:latest

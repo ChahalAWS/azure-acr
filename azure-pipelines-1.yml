@@ -1,0 +1,48 @@
+trigger:
+- master
+
+pr: none
+
+variables:
+  HELM_EXPERIMENTAL_OCI: 1
+  ACR.Name: 'acr123test'
+  Azure.ServiceConnection: 'acr-service-principal-test12'
+
+stages:
+- stage: build
+  displayName: Build and Push
+  jobs:  
+  - job: Helm
+    displayName: Helm Publish
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - task: HelmDeploy@0
+      displayName: Package Helm Chart
+      inputs:
+        command: 'package'
+        chartPath: '$(System.DefaultWorkingDirectory)/azure-acr'
+        chartVersion: '$(Build.BuildNumber)'
+
+    - task: HelmInstaller@1
+      displayName: Initialize Helm
+      inputs:
+        helmVersionToInstall: 'latest'
+
+    - task : Bash@3
+      inputs:
+        targetType: 'inline'
+        script: 'ls $(System.DefaultWorkingDirectory)'
+
+    - task: AzureCLI@2
+      displayName: Login to Azure Container Registry
+      inputs:
+        azureSubscription: "$(Azure.ServiceConnection)"
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: 'az acr helm push -n $(ACR.Name) $(Build.ArtifactStagingDirectory)/*.tgz'
+        
+    - bash: |
+        helm package $(System.DefaultWorkingDirectory)/azure-acr/ --app-version $(Build.BuildNumber)
+        mv *.tgz $(Build.ArtifactStagingDirectory)/
